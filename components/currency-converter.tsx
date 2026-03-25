@@ -284,21 +284,26 @@ export function CurrencyConverter() {
 
           return (
             <div key={currency.code} className="relative">
-              <Input
-                type="text"
-                inputMode="decimal"
-                disabled={isFieldLoading}
-                placeholder={isFieldLoading ? "Cargando..." : "0,00"}
-                value={isFieldLoading ? "" : getDisplayValue(currency.code)}
-                onFocus={() => handleFocus(currency.code)}
-                onBlur={handleBlur}
-                onChange={(e) => handleInputChange(currency.code, e.target.value)}
-                className={`h-14 text-lg font-medium pl-14 pr-4 rounded-xl bg-zinc-900 transition-colors disabled:opacity-50 ${
-                  isAnchor
-                    ? "border-emerald-500/70 ring-1 ring-emerald-500/40 focus:border-emerald-400"
-                    : "border-zinc-800 focus:border-zinc-600"
-                }`}
-              />
+              {isFieldLoading ? (
+                <div className="h-14 rounded-xl bg-zinc-900 border border-zinc-800 pl-14 pr-4 flex items-center">
+                  <div className="h-5 w-20 bg-zinc-800 rounded animate-pulse" />
+                </div>
+              ) : (
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  value={getDisplayValue(currency.code)}
+                  onFocus={() => handleFocus(currency.code)}
+                  onBlur={handleBlur}
+                  onChange={(e) => handleInputChange(currency.code, e.target.value)}
+                  className={`h-14 text-lg font-medium pl-14 pr-4 rounded-xl bg-zinc-900 transition-colors ${
+                    isAnchor
+                      ? "border-emerald-500/70 ring-1 ring-emerald-500/40 focus:border-emerald-400"
+                      : "border-zinc-800 focus:border-zinc-600"
+                  }`}
+                />
+              )}
               <span className="absolute left-4 top-1/2 -translate-y-1/2">
                 <span className="text-xl sm:hidden">{currency.emoji}</span>
                 <img
