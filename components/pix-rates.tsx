@@ -217,10 +217,9 @@ export function PixRates() {
     async function fetchRates() {
       setLoading(true);
       try {
-        const response = await fetch(
-          `https://api.comparapix.ar/quotes?_t=${Date.now()}`,
-          { cache: "no-store" }
-        );
+        const response = await fetch(`/api/pix-rates?_t=${Date.now()}`, {
+          cache: "no-store",
+        });
         const data: ApiResponse = await response.json();
 
         const walletRates: WalletRate[] = [];

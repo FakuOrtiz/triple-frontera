@@ -8,7 +8,7 @@ export default function Home() {
   return (
     <CurrencyProvider>
       <div className="min-h-screen bg-black text-white">
-        <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-sm border-b border-zinc-800">
+        <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-sm border-b border-zinc-800 pt-[env(safe-area-inset-top)]">
           <div className="max-w-md mx-auto px-4 py-3">
             <h1 className="text-lg font-semibold text-center">
               🌎 Triple Frontera
@@ -16,7 +16,7 @@ export default function Home() {
           </div>
         </header>
 
-        <main className="max-w-md mx-auto px-4 py-6 space-y-8">
+        <main className="max-w-md mx-auto px-4 py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] space-y-8">
           <CurrencyConverter />
           <ActionButtons />
           <ExchangeRates />
