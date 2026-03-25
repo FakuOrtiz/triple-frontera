@@ -13,18 +13,44 @@ interface ExchangeRates {
 }
 
 const CURRENCIES = [
-  { code: "ARS", name: "Pesos Argentinos", emoji: "🇦🇷" },
-  { code: "USD", name: "Dólares", emoji: "🇺🇸" },
-  { code: "BRL", name: "Reales", emoji: "🇧🇷" },
-  { code: "PYG", name: "Guaraníes", emoji: "🇵🇾" },
+  {
+    code: "ARS",
+    name: "Pesos Argentinos",
+    emoji: "🇦🇷",
+    flagSvg:
+      "https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/1f1e6-1f1f7.svg",
+  },
+  {
+    code: "USD",
+    name: "Dólares",
+    emoji: "🇺🇸",
+    flagSvg:
+      "https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/1f1fa-1f1f8.svg",
+  },
+  {
+    code: "BRL",
+    name: "Reales",
+    emoji: "🇧🇷",
+    flagSvg:
+      "https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/1f1e7-1f1f7.svg",
+  },
+  {
+    code: "PYG",
+    name: "Guaraníes",
+    emoji: "🇵🇾",
+    flagSvg:
+      "https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/1f1f5-1f1fe.svg",
+  },
 ] as const;
 
 type CurrencyCode = (typeof CURRENCIES)[number]["code"];
 
 export function CurrencyConverter() {
-  const { setBrlAmount, refreshKey, setOnClear } = useCurrency();
+  const { setBrlAmount, refreshKey, setOnClear, markUpdated } = useCurrency();
   const [rates, setRates] = useState<ExchangeRates | null>(null);
   const [activeInput, setActiveInput] = useState<CurrencyCode | null>(null);
+  const [anchorCurrency, setAnchorCurrency] = useState<CurrencyCode | null>(null);
+  const [anchorAmount, setAnchorAmount] = useState<number | null>(null);
   const [rawValue, setRawValue] = useState("");
   const [values, setValues] = useState<Record<CurrencyCode, string>>({
     ARS: "",
@@ -36,6 +62,8 @@ export function CurrencyConverter() {
 
   const clearValues = useCallback(() => {
     setRawValue("");
+    setAnchorCurrency(null);
+    setAnchorAmount(null);
     setValues({ ARS: "", USD: "", BRL: "", PYG: "" });
   }, []);
 
@@ -74,6 +102,7 @@ export function CurrencyConverter() {
             usdToBrl: brlRate.rate,
             usdToPyg: pygRate.rate,
           });
+          markUpdated();
         }
       } catch (error) {
         console.error("Error fetching rates:", error);
@@ -83,7 +112,7 @@ export function CurrencyConverter() {
     }
 
     fetchRates();
-  }, [refreshKey]);
+  }, [refreshKey, markUpdated]);
 
   const formatNumber = (value: number): string => {
     return value.toLocaleString("es-AR", {
@@ -137,6 +166,8 @@ export function CurrencyConverter() {
 
     if (cleanValue === "" || cleanValue === ".") {
       setRawValue("");
+      setAnchorCurrency(null);
+      setAnchorAmount(null);
       setValues({ ARS: "", USD: "", BRL: "", PYG: "" });
       setBrlAmount(null);
       return;
@@ -146,6 +177,8 @@ export function CurrencyConverter() {
     const numValue = parseFloat(cleanValue);
 
     if (!isNaN(numValue)) {
+      setAnchorCurrency(currency);
+      setAnchorAmount(numValue);
       const converted = convertFromCurrency(numValue, currency);
       setValues({
         ...converted.values,
@@ -177,6 +210,13 @@ export function CurrencyConverter() {
     return values[code];
   };
 
+  useEffect(() => {
+    if (!rates || anchorCurrency === null || anchorAmount === null) return;
+    const converted = convertFromCurrency(anchorAmount, anchorCurrency);
+    setValues(converted.values);
+    setBrlAmount(converted.brl);
+  }, [rates, anchorCurrency, anchorAmount, convertFromCurrency, setBrlAmount]);
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 text-zinc-400 text-sm">
@@ -197,8 +237,13 @@ export function CurrencyConverter() {
               onChange={(e) => handleInputChange(currency.code, e.target.value)}
               className="h-14 text-lg font-medium pl-14 pr-4 rounded-xl bg-zinc-900 border-zinc-800 focus:border-zinc-600 transition-colors disabled:opacity-50"
             />
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl">
-              {currency.emoji}
+            <span className="absolute left-4 top-1/2 -translate-y-1/2">
+              <span className="text-xl sm:hidden">{currency.emoji}</span>
+              <img
+                src={currency.flagSvg}
+                alt={`Bandera ${currency.code}`}
+                className="hidden sm:block w-6 h-6"
+              />
             </span>
           </div>
         ))}

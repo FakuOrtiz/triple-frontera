@@ -176,7 +176,7 @@ function WalletList({
 }
 
 export function PixRates() {
-  const { brlAmount, refreshKey } = useCurrency();
+  const { brlAmount, refreshKey, markUpdated } = useCurrency();
   const [allWallets, setAllWallets] = useState<WalletRate[]>([]);
   const [enabledWallets, setEnabledWallets] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -240,6 +240,7 @@ export function PixRates() {
 
         walletRates.sort((a, b) => a.rate - b.rate);
         setAllWallets(walletRates);
+        markUpdated();
       } catch (error) {
         console.error("Error fetching PIX rates:", error);
       } finally {
@@ -248,7 +249,7 @@ export function PixRates() {
     }
 
     fetchRates();
-  }, [refreshKey]);
+  }, [refreshKey, markUpdated]);
 
   const formatRate = (value: number) => {
     return value.toLocaleString("es-AR", {

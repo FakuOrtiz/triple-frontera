@@ -11,13 +11,31 @@ interface Rates {
 }
 
 const CURRENCIES_CONFIG = [
-  { code: "ARS", emoji: "🇦🇷", decimals: 2 },
-  { code: "BRL", emoji: "🇧🇷", decimals: 2 },
-  { code: "PYG", emoji: "🇵🇾", decimals: 0 },
+  {
+    code: "ARS",
+    emoji: "🇦🇷",
+    decimals: 2,
+    flagSvg:
+      "https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/1f1e6-1f1f7.svg",
+  },
+  {
+    code: "BRL",
+    emoji: "🇧🇷",
+    decimals: 2,
+    flagSvg:
+      "https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/1f1e7-1f1f7.svg",
+  },
+  {
+    code: "PYG",
+    emoji: "🇵🇾",
+    decimals: 0,
+    flagSvg:
+      "https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/1f1f5-1f1fe.svg",
+  },
 ];
 
 export function ExchangeRates() {
-  const { refreshKey } = useCurrency();
+  const { refreshKey, markUpdated } = useCurrency();
   const [rates, setRates] = useState<Rates | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -50,6 +68,7 @@ export function ExchangeRates() {
             brl: brlRate.rate,
             pyg: pygRate.rate,
           });
+          markUpdated();
         }
       } catch (error) {
         console.error("Error fetching rates:", error);
@@ -59,7 +78,7 @@ export function ExchangeRates() {
     }
 
     fetchRates();
-  }, [refreshKey]);
+  }, [refreshKey, markUpdated]);
 
   const formatRate = (value: number, decimals: number = 2) => {
     return value.toLocaleString("es-AR", {
@@ -93,7 +112,14 @@ export function ExchangeRates() {
               key={currency.code}
               className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-center"
             >
-              <div className="text-lg mb-1">{currency.emoji}</div>
+              <div className="mb-1">
+                <span className="text-lg sm:hidden">{currency.emoji}</span>
+                <img
+                  src={currency.flagSvg}
+                  alt={`Bandera ${currency.code}`}
+                  className="hidden sm:block w-6 h-6 mx-auto"
+                />
+              </div>
               <div className="text-xs text-zinc-500 mb-1">{currency.code}</div>
               {loading ? (
                 <div className="h-5 w-16 bg-zinc-800 rounded mx-auto animate-pulse" />
