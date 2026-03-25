@@ -36,7 +36,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
       </head>
-      <body className="min-h-full flex flex-col bg-black text-white">{children}</body>
+      <body className="min-h-full flex flex-col bg-black text-white tabular-nums">{children}</body>
     </html>
   );
 }

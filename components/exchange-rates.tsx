@@ -35,7 +35,7 @@ const CURRENCIES_CONFIG = [
 ];
 
 export function ExchangeRates() {
-  const { refreshKey, markUpdated } = useCurrency();
+  const { refreshKey, markUpdated, finishRefreshFetch } = useCurrency();
   const [rates, setRates] = useState<Rates | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -74,11 +74,12 @@ export function ExchangeRates() {
         console.error("Error fetching rates:", error);
       } finally {
         setLoading(false);
+        finishRefreshFetch(refreshKey);
       }
     }
 
     fetchRates();
-  }, [refreshKey, markUpdated]);
+  }, [refreshKey, markUpdated, finishRefreshFetch]);
 
   const formatRate = (value: number, decimals: number = 2) => {
     return value.toLocaleString("es-AR", {

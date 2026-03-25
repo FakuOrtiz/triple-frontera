@@ -44,9 +44,11 @@ const CURRENCIES = [
 ] as const;
 
 type CurrencyCode = (typeof CURRENCIES)[number]["code"];
+const MAX_INTEGER_DIGITS = 12;
 
 export function CurrencyConverter() {
-  const { setBrlAmount, refreshKey, setOnClear, markUpdated } = useCurrency();
+  const { setBrlAmount, refreshKey, setOnClear, markUpdated, finishRefreshFetch } =
+    useCurrency();
   const [rates, setRates] = useState<ExchangeRates | null>(null);
   const [activeInput, setActiveInput] = useState<CurrencyCode | null>(null);
   const [anchorCurrency, setAnchorCurrency] = useState<CurrencyCode | null>(null);
@@ -108,18 +110,19 @@ export function CurrencyConverter() {
         console.error("Error fetching rates:", error);
       } finally {
         setLoading(false);
+        finishRefreshFetch(refreshKey);
       }
     }
 
     fetchRates();
-  }, [refreshKey, markUpdated]);
+  }, [refreshKey, markUpdated, finishRefreshFetch]);
 
-  const formatNumber = (value: number): string => {
+  const formatNumber = useCallback((value: number): string => {
     return value.toLocaleString("es-AR", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
-  };
+  }, []);
 
   const convertFromCurrency = useCallback(
     (amount: number, fromCurrency: CurrencyCode): { values: Record<CurrencyCode, string>; brl: number } => {
@@ -158,11 +161,40 @@ export function CurrencyConverter() {
         brl: brlValue,
       };
     },
-    [rates]
+    [rates, formatNumber]
   );
 
   const handleInputChange = (currency: CurrencyCode, value: string) => {
-    const cleanValue = value.replace(/[^\d.,]/g, "").replace(",", ".");
+    const sanitizeInput = (input: string): string => {
+      const filtered = input.replace(/[^\d.,]/g, "");
+      if (!filtered) return "";
+
+      const lastDot = filtered.lastIndexOf(".");
+      const lastComma = filtered.lastIndexOf(",");
+      const separatorIndex = Math.max(lastDot, lastComma);
+
+      if (separatorIndex === -1) {
+        return filtered.replace(/[^\d]/g, "").slice(0, MAX_INTEGER_DIGITS);
+      }
+
+      const integerPart = filtered
+        .slice(0, separatorIndex)
+        .replace(/[^\d]/g, "")
+        .slice(0, MAX_INTEGER_DIGITS);
+      const decimalPart = filtered
+        .slice(separatorIndex + 1)
+        .replace(/[^\d]/g, "")
+        .slice(0, 2);
+
+      if (!integerPart && !decimalPart) return "";
+      if (filtered.endsWith(".") || filtered.endsWith(",")) {
+        return `${integerPart || "0"}.`;
+      }
+
+      return decimalPart ? `${integerPart || "0"}.${decimalPart}` : integerPart;
+    };
+
+    const cleanValue = sanitizeInput(value);
 
     if (cleanValue === "" || cleanValue === ".") {
       setRawValue("");
@@ -189,6 +221,18 @@ export function CurrencyConverter() {
   };
 
   const handleFocus = (currency: CurrencyCode) => {
+    if (
+      anchorCurrency !== null &&
+      anchorAmount !== null &&
+      anchorCurrency !== currency
+    ) {
+      // Format the previous anchor only when user starts editing another field.
+      setValues((prev) => ({
+        ...prev,
+        [anchorCurrency]: formatNumber(anchorAmount),
+      }));
+    }
+
     setActiveInput(currency);
     const currentValue = values[currency];
     if (currentValue) {
@@ -213,9 +257,19 @@ export function CurrencyConverter() {
   useEffect(() => {
     if (!rates || anchorCurrency === null || anchorAmount === null) return;
     const converted = convertFromCurrency(anchorAmount, anchorCurrency);
-    setValues(converted.values);
+    setValues((prev) => ({
+      ...converted.values,
+      // Keep anchor exactly as typed; it gets formatted only when editing another field.
+      [anchorCurrency]: prev[anchorCurrency],
+    }));
     setBrlAmount(converted.brl);
-  }, [rates, anchorCurrency, anchorAmount, convertFromCurrency, setBrlAmount]);
+  }, [
+    rates,
+    anchorCurrency,
+    anchorAmount,
+    convertFromCurrency,
+    setBrlAmount,
+  ]);
 
   return (
     <div className="space-y-3">
@@ -224,29 +278,38 @@ export function CurrencyConverter() {
         <span>Conversor</span>
       </div>
       <div className="space-y-4">
-        {CURRENCIES.map((currency) => (
-          <div key={currency.code} className="relative">
-            <Input
-              type="text"
-              inputMode="decimal"
-              disabled={loading}
-              placeholder={loading ? "Cargando..." : "0,00"}
-              value={loading ? "" : getDisplayValue(currency.code)}
-              onFocus={() => handleFocus(currency.code)}
-              onBlur={handleBlur}
-              onChange={(e) => handleInputChange(currency.code, e.target.value)}
-              className="h-14 text-lg font-medium pl-14 pr-4 rounded-xl bg-zinc-900 border-zinc-800 focus:border-zinc-600 transition-colors disabled:opacity-50"
-            />
-            <span className="absolute left-4 top-1/2 -translate-y-1/2">
-              <span className="text-xl sm:hidden">{currency.emoji}</span>
-              <img
-                src={currency.flagSvg}
-                alt={`Bandera ${currency.code}`}
-                className="hidden sm:block w-6 h-6"
+        {CURRENCIES.map((currency) => {
+          const isAnchor = anchorCurrency === currency.code && anchorAmount !== null;
+          const isFieldLoading = loading && !isAnchor;
+
+          return (
+            <div key={currency.code} className="relative">
+              <Input
+                type="text"
+                inputMode="decimal"
+                disabled={isFieldLoading}
+                placeholder={isFieldLoading ? "Cargando..." : "0,00"}
+                value={isFieldLoading ? "" : getDisplayValue(currency.code)}
+                onFocus={() => handleFocus(currency.code)}
+                onBlur={handleBlur}
+                onChange={(e) => handleInputChange(currency.code, e.target.value)}
+                className={`h-14 text-lg font-medium pl-14 pr-4 rounded-xl bg-zinc-900 transition-colors disabled:opacity-50 ${
+                  isAnchor
+                    ? "border-emerald-500/70 ring-1 ring-emerald-500/40 focus:border-emerald-400"
+                    : "border-zinc-800 focus:border-zinc-600"
+                }`}
               />
-            </span>
-          </div>
-        ))}
+              <span className="absolute left-4 top-1/2 -translate-y-1/2">
+                <span className="text-xl sm:hidden">{currency.emoji}</span>
+                <img
+                  src={currency.flagSvg}
+                  alt={`Bandera ${currency.code}`}
+                  className="hidden sm:block w-6 h-6"
+                />
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
