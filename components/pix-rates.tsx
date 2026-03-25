@@ -99,7 +99,7 @@ function WalletList({
   selectNone,
   onClose,
 }: WalletListProps) {
-  const allSelected = enabledWallets === null;
+  const allSelected = enabledWallets !== null && enabledWallets.length === wallets.length;
   const noneSelected = enabledWallets !== null && enabledWallets.length === 0;
 
   return (
@@ -181,24 +181,37 @@ export function PixRates() {
   const [enabledWallets, setEnabledWallets] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 640px)");
+
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
+    if (saved !== null) {
       try {
         setEnabledWallets(JSON.parse(saved));
       } catch {
         setEnabledWallets(null);
       }
+      setIsFirstLoad(false);
     }
   }, []);
 
   useEffect(() => {
-    if (enabledWallets !== null) {
+    if (isFirstLoad && allWallets.length > 0 && localStorage.getItem(STORAGE_KEY) === null) {
+      const allIds = allWallets.map((w) => w.id);
+      setEnabledWallets(allIds);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(allIds));
+      setIsFirstLoad(false);
+    }
+  }, [allWallets, isFirstLoad]);
+
+  useEffect(() => {
+    if (enabledWallets !== null && !isFirstLoad) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(enabledWallets));
     }
-  }, [enabledWallets]);
+  }, [enabledWallets, isFirstLoad]);
 
   useEffect(() => {
     async function fetchRates() {
@@ -255,8 +268,7 @@ export function PixRates() {
   };
 
   const selectAll = () => {
-    setEnabledWallets(null);
-    localStorage.removeItem(STORAGE_KEY);
+    setEnabledWallets(allWallets.map((w) => w.id));
   };
 
   const selectNone = () => {
@@ -264,10 +276,11 @@ export function PixRates() {
   };
 
   const hasAmount = brlAmount !== null && brlAmount > 0;
-  const filteredWallets =
-    enabledWallets === null
-      ? allWallets
-      : allWallets.filter((w) => enabledWallets.includes(w.id));
+  const allSelected = enabledWallets !== null && enabledWallets.length === allWallets.length;
+  const hasFavorites = !loading && !isFirstLoad && enabledWallets !== null && enabledWallets.length > 0 && !allSelected;
+  const filteredWallets = showAll
+    ? allWallets
+    : allWallets.filter((w) => enabledWallets?.includes(w.id) ?? true);
 
   return (
     <div className="space-y-3">
@@ -275,17 +288,44 @@ export function PixRates() {
         <div className="flex items-center gap-2 text-zinc-400 text-sm">
           <CreditCard className="w-4 h-4" />
           <span>Pagar con PIX</span>
-          {hasAmount && (
-            <span className="text-zinc-500">· {formatRate(brlAmount)} BRL</span>
-          )}
         </div>
-        <button
-          onClick={() => setShowSettings(true)}
-          className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
-          title="Configurar billeteras"
-        >
-          <Settings className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          {hasFavorites && (
+            <div className="flex bg-zinc-900 rounded-lg p-0.5 text-xs">
+              <button
+                onClick={() => setShowAll(false)}
+                className={`px-2 py-1 rounded-md transition-colors ${
+                  !showAll
+                    ? "bg-zinc-700 text-white"
+                    : "text-zinc-500 hover:text-zinc-300"
+                }`}
+              >
+                Favoritos
+              </button>
+              <button
+                onClick={() => setShowAll(true)}
+                className={`px-2 py-1 rounded-md transition-colors ${
+                  showAll
+                    ? "bg-zinc-700 text-white"
+                    : "text-zinc-500 hover:text-zinc-300"
+                }`}
+              >
+                Todas
+              </button>
+            </div>
+          )}
+          <button
+            onClick={() => setShowSettings(true)}
+            className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+            title="Configurar billeteras"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="text-zinc-500 text-sm">
+        {hasAmount ? formatRate(brlAmount) : "1,00"} BRL
       </div>
 
       <div className="space-y-2">
@@ -324,7 +364,8 @@ export function PixRates() {
               </div>
             )
             : filteredWallets.map((wallet, index) => {
-                const totalArs = hasAmount ? wallet.rate * brlAmount : null;
+                const amount = hasAmount ? brlAmount : 1;
+                const totalArs = wallet.rate * amount;
 
                 return (
                   <div
@@ -349,16 +390,14 @@ export function PixRates() {
                       </div>
                     </div>
                     <div className="text-right">
-                      {totalArs !== null && (
-                        <div className="font-semibold text-white">
-                          {formatRate(totalArs)} ARS
+                      <div className="font-semibold text-white">
+                        {formatRate(totalArs)} ARS
+                      </div>
+                      {hasAmount && (
+                        <div className="text-xs text-zinc-500">
+                          1 BRL = {formatRate(wallet.rate)} ARS
                         </div>
                       )}
-                      <div
-                        className={`text-xs ${totalArs !== null ? "text-zinc-500" : "text-white font-semibold"}`}
-                      >
-                        1 BRL = {formatRate(wallet.rate)} ARS
-                      </div>
                     </div>
                   </div>
                 );
