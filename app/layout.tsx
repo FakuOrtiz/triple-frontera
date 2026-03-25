@@ -10,6 +10,15 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Triple Frontera",
   description: "Tu guía para Iguazú, Ciudad del Este y Foz do Iguaçu",
+  icons: {
+    icon: [
+      { url: "/triple-frontera-logo.png?v=2", type: "image/png" },
+      { url: "/triple-frontera-logo.png?v=2", sizes: "32x32", type: "image/png" },
+      { url: "/triple-frontera-logo.png?v=2", sizes: "16x16", type: "image/png" },
+    ],
+    apple: [{ url: "/triple-frontera-logo.png?v=2", sizes: "180x180" }],
+    shortcut: ["/triple-frontera-logo.png?v=2"],
+  },
   appleWebApp: {
     statusBarStyle: "black-translucent",
   },
